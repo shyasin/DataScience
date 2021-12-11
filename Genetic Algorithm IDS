@@ -1,0 +1,130 @@
+#Genetic Algorithm implementation
+def gen_chromosome():
+    sp = random.choice([25,-1])
+    dp = random.choice([25,-1])
+    pr = random.choice(['TCP'])
+    flg =random.choice(['.AP.SF','.A.RS.','...R..',-1])
+    pkt = random.choice([1,2,3,4,5,6,7,8,9,10,-1])
+    byt = random.choice([40,216,230,268,276,290,348,460,552,-1])
+    return [sp,dp,pr,flg,pkt,byt]
+
+def fitness(chromosome):
+    N = dataset_normal_train.shape[0] + dataset_spam_train.shape[0]
+    AB = 0   # counter for if A then B that maches both the condition and result
+    A = 0  # counter for records that satisfy the condition only
+    for i in range(dataset_spam_train.shape[0]):
+        if (chromosome[0]== -1) or (dataset_spam_train.iloc[i,1]==chromosome[0]):
+            if (chromosome[1]== -1) or (dataset_spam_train.iloc[i,2]==chromosome[1]):
+                if (chromosome[2]== -1) or (dataset_spam_train.iloc[i,3]==chromosome[2]):
+                    if (chromosome[3]== -1) or (dataset_spam_train.iloc[i,4]==chromosome[3]):
+                        if (chromosome[4]== -1) or (dataset_spam_train.iloc[i,5]==chromosome[4]):
+                            if (chromosome[5]== -1) or (dataset_spam_train.iloc[i,6]==chromosome[5]):
+                                AB += 1
+         
+        if (chromosome[0]== -1) or (dataset_normal_train.iloc[i,1]==chromosome[0]):
+            if (chromosome[1]== -1) or (dataset_normal_train.iloc[i,2]==chromosome[1]):
+                if (chromosome[2]== -1) or (dataset_normal_train.iloc[i,3]==chromosome[2]):
+                    if (chromosome[3]== -1) or (dataset_normal_train.iloc[i,4]==chromosome[3]):
+                        if (chromosome[4]== -1) or (dataset_normal_train.iloc[i,5]==chromosome[4]):
+                            if (chromosome[5]== -1) or (dataset_normal_train.iloc[i,6]==chromosome[5]):
+                                A += 1
+    support = AB / N
+    if AB==0 and A==0:
+        confidence = 0
+    else:
+        confidence = AB/(AB+A)
+    fitness = 0.2 * support + 0.8 * confidence
+    return fitness 
+
+def gen_population(size):
+    return [gen_chromosome() for x in range(size)]
+
+
+def evaluate_population(pop):
+    pop_fitness =  list(map(lambda x: fitness(x), pop))
+    return  pop_fitness
+
+def roulette_selection(pop,pop_fitness, n):
+    total = sum(pop_fitness)
+    i = 0
+    w, v = pop_fitness[0], pop[0]
+    while n:
+        x = total * (1 - random.random() ** (1.0 / n))
+        total -= x
+        while x > w:
+            x -= w
+            i += 1
+            w, v = pop_fitness[i], pop[i]
+        w -= x
+        yield v
+        n -= 1
+
+
+def uniform_crossover(a,b):
+    mask = [random.randint(0,1) for i in range(len(a))]
+    c=[0,'',0,'',0,0]
+    d=[0,'',0,'',0,0]
+    for i in range(len(a)):
+        if mask[i]:
+            c[i]=a[i]
+            d[i]=b[i]
+        else:
+            c[i]=b[i]
+            d[i]=a[i]
+    return c,d
+
+
+def mutation(child):
+    child[3]=random.choice(['.AP.SF','.A.RS.','...R..',-1])
+    child[4] = random.choice([1,2,3,4,5,6,7,8,9,10,-1])
+    child[5] = random.choice([40,216,230,268,276,290,348,460,552,-1])
+    return child
+
+
+def train_ga(generations_count,population_size,P_CROSSOVER=0.7,P_MUTATION = 0.3):
+    maxvalue = 0                                             # highest fitness value in the population
+    maxvalues = []                                           # index for each generation
+    generations = []                                         # genes of each generation
+    initial_population = gen_population(population_size)
+    current_pop = initial_population
+    for generation in range(generations_count):
+        pop_fitness = evaluate_population(current_pop)
+        result = list(zip(current_pop,pop_fitness))     
+        maxvalue = max(pop_fitness) 
+        maxvalues.append(maxvalue)
+        generations.append(generation)
+        print(f'Generation id:{generation} MaxValue: {maxvalue}')
+        print(f'\n generation {generation} population and fitness values \n" {result} \n')
+        offspring = []
+        while len(offspring) < population_size:
+            parent1=[]
+            parent2= []
+            
+            # selection of genes (roullette wheel selection)
+            parent1,parent2 = roulette_selection(current_pop,pop_fitness,2)
+                
+            if random.random() < P_CROSSOVER:
+                child1, child2 = uniform_crossover(parent1,parent2)         # crossover of genes to produce offspring
+            else:
+                child1 = parent1
+                child2 = parent2
+            
+            if random.random() < P_MUTATION:
+                child1 = mutation(child1)                           # mutation of genes to produce offspring
+
+            offspring.append(child1)
+            offspring.append(child2)
+            
+        print(offspring)
+        current_pop = offspring
+        
+    
+    plt.plot(generations,maxvalues)
+    plt.ylabel('Fitness')
+    plt.xlabel('Generation id')
+    plt.title('GA-Training ')
+
+    plt.show()    
+        
+
+train_ga(60,20,0.9,0.4)
